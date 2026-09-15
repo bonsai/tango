@@ -1,0 +1,82 @@
+name: tango-bqmlite-go-poc
+version: 0.1
+purpose: Prove that tango can orchestrate a deterministic BQMLite-Go analysis from an AW task.
+
+actors:
+  aw:
+    role: workflow
+    responsibility: define research task
+  tango:
+    role: orchestrator
+    responsibility: select dataset, model, execute, evaluate
+  bqmlite-go:
+    role: ml-engine
+    responsibility: deterministic ML execution
+  github-observatory:
+    role: dataset
+    responsibility: provide repository observation data
+
+data:
+  source: bonsai/github-observatory
+  input: data/repositories.jsonl
+  derived:
+    - language
+    - repository_size
+    - activity
+    - domain
+
+research:
+  question: What measurable structure exists in the bonsai repository ecosystem?
+  hypothesis: Repository features reveal distinct clusters of work domains.
+
+pipeline:
+  - id: observe
+    actor: github-observatory
+    action: load
+    output: dataset.json
+
+  - id: plan
+    actor: tango
+    action: select-model
+    input: dataset.json
+    output: execution-plan.json
+
+  - id: train
+    actor: bqmlite-go
+    action: train
+    input: execution-plan.json
+    output: model.json
+
+  - id: predict
+    actor: bqmlite-go
+    action: predict
+    input: model.json
+    output: prediction.json
+
+  - id: evaluate
+    actor: tango
+    action: evaluate
+    input:
+      - model.json
+      - prediction.json
+    output: research-result.json
+
+  - id: next
+    actor: tango
+    action: generate-next-question
+    input: research-result.json
+    output: next-task.json
+
+contract:
+  transport: json
+  deterministic: true
+  fingerprint: required
+  ml_logic_in_tango: false
+  orchestration_in_bqmlite_go: false
+
+success:
+  - tango can create an execution plan
+  - bqmlite-go returns a deterministic result
+  - result contains a fingerprint
+  - tango can evaluate the result
+  - result can generate the next research task
