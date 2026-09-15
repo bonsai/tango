@@ -36,19 +36,25 @@ jobs:
         with:
           go-version: '1.24'
 
+      - name: Test bqmlite-go
+        run: go test ./...
+        working-directory: bqmlite-go
+
       - name: Build bqmlite-go
         run: go build -o "$RUNNER_TEMP/bqmlite" ./cmd/bqmlite
         working-directory: bqmlite-go
 
+      - name: Test tango
+        run: go test ./...
+
       - name: Build tango
         run: go build -o "$RUNNER_TEMP/tango" ./cmd/tango
 
-      - name: Run POC
+      - name: Run POC state machine
         run: |
           "$RUNNER_TEMP/tango" \
+            -poc poc.yaml \
             -input github-observatory/data/repositories.jsonl \
             -bqmlite "$RUNNER_TEMP/bqmlite" \
-            -engine mean \
-            -target size \
             -output "$RUNNER_TEMP/result.json"
           cat "$RUNNER_TEMP/result.json"
