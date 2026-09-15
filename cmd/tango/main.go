@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 )
 
 type Repo struct {
-	Name   string `json:"name"`
+	Name   string  `json:"name"`
 	Size   float64 `json:"size"`
 	Stars  float64 `json:"stars"`
 	Forks  float64 `json:"forks"`
@@ -20,16 +19,16 @@ type Repo struct {
 }
 
 type Dataset struct {
-	Name   string `json:"name"`
-	Target string `json:"target"`
+	Name   string           `json:"name"`
+	Target string           `json:"target"`
 	Rows   []map[string]any `json:"rows"`
 }
 
 type Result struct {
-	Question string `json:"question"`
-	Engine   string `json:"engine"`
-	Dataset  string `json:"dataset"`
-	Rows     int `json:"rows"`
+	Question string          `json:"question"`
+	Engine   string          `json:"engine"`
+	Dataset  string          `json:"dataset"`
+	Rows     int             `json:"rows"`
 	Output   json.RawMessage `json:"output"`
 }
 
@@ -43,14 +42,21 @@ func main() {
 	flag.Parse()
 
 	ds, err := loadJSONL(*input, *target)
-	if err != nil { fatal(err) }
+	if err != nil {
+		fatal(err)
+	}
 
 	tmp, err := os.CreateTemp("", "tango-dataset-*.json")
-	if err != nil { fatal(err) }
+	if err != nil {
+		fatal(err)
+	}
 	defer os.Remove(tmp.Name())
-	enc := json.NewEncoder(tmp)
-	if err := enc.Encode(ds); err != nil { fatal(err) }
-	if err := tmp.Close(); err != nil { fatal(err) }
+	if err := json.NewEncoder(tmp).Encode(ds); err != nil {
+		fatal(err)
+	}
+	if err := tmp.Close(); err != nil {
+		fatal(err)
+	}
 
 	resultFile := tmp.Name() + ".result.json"
 	defer os.Remove(resultFile)
@@ -61,13 +67,19 @@ func main() {
 		fatal(fmt.Errorf("bqmlite-go execution failed: %w", err))
 	}
 	result, err := os.ReadFile(resultFile)
-	if err != nil { fatal(err) }
+	if err != nil {
+		fatal(err)
+	}
 
 	wrapped := Result{Question: *question, Engine: *engine, Dataset: ds.Name, Rows: len(ds.Rows), Output: result}
 	pretty, err := json.MarshalIndent(wrapped, "", "  ")
-	if err != nil { fatal(err) }
+	if err != nil {
+		fatal(err)
+	}
 	if *out != "" {
-		if err := os.WriteFile(*out, append(pretty, '\n'), 0644); err != nil { fatal(err) }
+		if err := os.WriteFile(*out, append(pretty, '\n'), 0644); err != nil {
+			fatal(err)
+		}
 		return
 	}
 	fmt.Println(string(pretty))
@@ -75,7 +87,9 @@ func main() {
 
 func loadJSONL(path, target string) (Dataset, error) {
 	f, err := os.Open(path)
-	if err != nil { return Dataset{}, err }
+	if err != nil {
+		return Dataset{}, err
+	}
 	defer f.Close()
 
 	ds := Dataset{Name: "github-observatory/repositories", Target: target}
@@ -83,19 +97,27 @@ func loadJSONL(path, target string) (Dataset, error) {
 	s.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	for s.Scan() {
 		line := strings.TrimSpace(s.Text())
-		if line == "" { continue }
+		if line == "" {
+			continue
+		}
 		var repo Repo
-		if err := json.Unmarshal([]byte(line), &repo); err != nil { return Dataset{}, err }
+		if err := json.Unmarshal([]byte(line), &repo); err != nil {
+			return Dataset{}, err
+		}
 		ds.Rows = append(ds.Rows, map[string]any{
-			"name": repo.Name,
-			"size": repo.Size,
-			"stars": repo.Stars,
-			"forks": repo.Forks,
+			"name":        repo.Name,
+			"size":        repo.Size,
+			"stars":       repo.Stars,
+			"forks":       repo.Forks,
 			"open_issues": repo.Issues,
 		})
 	}
-	if err := s.Err(); err != nil { return Dataset{}, err }
-	if len(ds.Rows) == 0 { return Dataset{}, fmt.Errorf("dataset is empty: %s", path) }
+	if err := s.Err(); err != nil {
+		return Dataset{}, err
+	}
+	if len(ds.Rows) == 0 {
+		return Dataset{}, fmt.Errorf("dataset is empty: %s", path)
+	}
 	return ds, nil
 }
 
@@ -103,5 +125,3 @@ func fatal(err error) {
 	fmt.Fprintln(os.Stderr, "tango:", err)
 	os.Exit(1)
 }
-
-var _ = strconv.IntSize
