@@ -1,5 +1,5 @@
 name: tango-bqmlite-go-poc
-version: 0.1
+version: 0.2
 purpose: Prove that tango can orchestrate a deterministic BQMLite-Go analysis from an AW task.
 
 actors:
@@ -19,11 +19,15 @@ actors:
 data:
   source: bonsai/github-observatory
   input: data/repositories.jsonl
+  target: size
   derived:
     - language
     - repository_size
     - activity
     - domain
+
+model:
+  engine: mean
 
 research:
   question: What measurable structure exists in the bonsai repository ecosystem?
