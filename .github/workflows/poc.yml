@@ -1,0 +1,54 @@
+name: tango-bqmlite-go-poc
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'poc.yaml'
+      - 'cmd/**'
+      - 'go.mod'
+      - '.github/workflows/poc.yml'
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout tango
+        uses: actions/checkout@v4
+
+      - name: Checkout github-observatory
+        uses: actions/checkout@v4
+        with:
+          repository: bonsai/github-observatory
+          path: github-observatory
+
+      - name: Checkout bqmlite-go
+        uses: actions/checkout@v4
+        with:
+          repository: bonsai/bqmlite-go
+          path: bqmlite-go
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build bqmlite-go
+        run: go build -o "$RUNNER_TEMP/bqmlite" ./cmd/bqmlite
+        working-directory: bqmlite-go
+
+      - name: Build tango
+        run: go build -o "$RUNNER_TEMP/tango" ./cmd/tango
+
+      - name: Run POC
+        run: |
+          "$RUNNER_TEMP/tango" \
+            -input github-observatory/data/repositories.jsonl \
+            -bqmlite "$RUNNER_TEMP/bqmlite" \
+            -engine mean \
+            -target size \
+            -output "$RUNNER_TEMP/result.json"
+          cat "$RUNNER_TEMP/result.json"
